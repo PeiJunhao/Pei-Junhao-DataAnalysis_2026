@@ -1,0 +1,97 @@
+library(vegan)
+#--------------------start-------------------------------
+# Get current working directory
+getwd()
+#----------------read dataset----------------------------
+data<-read.table("data.txt",header=TRUE,sep="\t",check.names = FALSE)
+summary (data)
+data
+rownames(data)<-data[,1]
+data<-data[,-1]
+data
+# Non-metric multidimensional scaling (NMDS) using Euclidean distances
+# Perform NMDS ordination based on Euclidean distances.
+# Euclidean distance is suitable for quantitative data but may be less appropriate
+# for ecological community data due to sensitivity to double zeros.
+# The metaMDS function automatically runs multiple random starts and scales the solution.
+ord <- metaMDS(data, distance = "euclidean")
+
+#Visualisation of NMDS results
+plot(ord, type = "n")                     # Create empty plot (axes only)
+points(ord, disp = "sites", pch = 21,
+       cex = 2.5, lwd = 2.5, col = "red") # Add site points (samples)
+text(ord, display = "site", cex = 0.7,
+     col = "red", pos = 3)                         # Label sites with their names
+
+
+# Cluster analysis with Euclidean distances
+# Compute Euclidean distance matrix between sites
+d<-vegdist(data,method="euclidean")
+# Perform hierarchical agglomerative clustering using average linkage (UPGMA)
+fit<-hclust(d, method="average")
+
+# Visualise the dendrogram with labels aligned at the baseline
+plot(fit, hang =-1)
+# Simple dendrogram plot (default parameters)
+plot(fit)
+
+
+#/////////////////////////////////////////////////////////////
+#Non-metric multidimensional scaling (NMDS) with Bray–Curtis dissimilarities
+# Bray–Curtis is a standard ecological distance measure that ignores double zeros
+# and is robust for abundance data.
+# The metaMDS function automatically runs multiple random starts and scales the final solution.
+ord <- metaMDS(data, distance = "bray")
+
+#Fit significant species vectors, only keep significant vectors with p ≤ 0.05
+fit_sp <- envfit(ord, data, permutations = 999)
+
+#Perform UPGMA clustering based on Bray–Curtis distance
+#Compute Bray–Curtis dissimilarity matrix between sites
+d<-vegdist(data,method="bray")
+#Perform hierarchical agglomerative clustering using average linkage (UPGMA)
+fit<-hclust(d, method="average")
+
+#Cut dendrogram into 2-3 clusters, here we use k=3 (can change to k=2)
+cluster <- cutree(fit, k=3)
+
+#Visualise dendrogram with labels aligned at the baseline
+plot(fit, hang =-1)
+#Simple dendrogram plot (default parameters)
+plot(fit)
+
+#Visualisation of NMDS results with clusters, ellipses and arrows
+plot(ord, type = "n")
+#Add site points coloured by cluster identity
+points(ord, disp="sites", pch=21, cex=2.5, lwd=2.5, bg = cluster)
+#Add confidence ellipses for each cluster
+ordiellipse(ord, cluster, conf=0.95, lwd=2)
+#Add significant species arrows with p ≤ 0.05
+plot(fit_sp, p.max=0.05, col="red")
+#Add non-overlapping site labels
+orditorp(ord, display="sites", cex=0.7)
+
+#Perform PERMANOVA test for cluster differences
+#Use Bray–Curtis distance with 999 permutations
+permanova <- adonis2(data ~ cluster, distance="bray", permutations=999)
+#Print PERMANOVA results including R² and p-value
+print(permanova)
+
+#/////////////////////////////////////////////////////////////
+# Non-metric multidimensional scaling (NMDS) with Jaccard distance
+ord <- metaMDS(data, distance = "jaccard")
+
+
+plot(ord, type = "n")
+points(ord, disp="sites", pch=21, cex=2.5, lwd=2.5, col = "red")
+text(ord, display = "site", cex=0.7, col="red", pos = 3)
+
+# Cluster analysis with Jaccard distance
+# Compute Jaccard dissimilarity matrix
+d<-vegdist(data,method="jaccard")
+# Hierarchical clustering using average linkage (UPGMA)
+fit<-hclust(d, method="average")
+# Visualise dendrogram with labels aligned
+plot(fit, hang =-1)
+# Default dendrogram plot
+plot(fit)
